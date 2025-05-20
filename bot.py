@@ -10,9 +10,11 @@ from serpapi import GoogleSearch
 import json
 from datetime import datetime, timedelta
 import re
-import pytesseract
+import easyocr
 from PIL import Image
 import io
+import numpy
+from config import get_official_search_params, get_news_search_params
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +29,9 @@ logger = logging.getLogger(__name__)
 # Initialize Gemini
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 model = genai.GenerativeModel('gemini-2.0-flash')
+
+# Initialize EasyOCR reader
+reader = easyocr.Reader(['az', 'en'])
 
 def extract_sources_from_text(text):
     """Extract mentioned sources from the news text using Gemini."""
@@ -110,21 +115,9 @@ def search_news_sources(news_content):
         week_ago = current_date - timedelta(days=7)
         date_range = f"after:{week_ago.strftime('%Y-%m-%d')}"
         
-        # Search in official sources
-        official_params = {
-            "engine": "google",
-            "q": f"{keywords} site:gov.az OR site:who.int OR site:un.org OR site:president.az OR site:meclis.gov.az OR site:ec.europa.eu OR site:unicef.org OR site:unhcr.org OR site:worldbank.org OR site:imf.org {date_range}",
-            "api_key": os.getenv('SERPAPI_API_KEY'),
-            "num": 5
-        }
-        
-        # Search in general news sources
-        news_params = {
-            "engine": "google",
-            "q": f"{keywords} site:bbc.com OR site:reuters.com OR site:apnews.com OR site:aa.com.tr OR site:azertag.az OR site:report.az OR site:apa.az OR site:azvision.az {date_range}",
-            "api_key": os.getenv('SERPAPI_API_KEY'),
-            "num": 5
-        }
+        # Get search parameters from config
+        official_params = get_official_search_params(keywords, date_range, os.getenv('SERPAPI_API_KEY'))
+        news_params = get_news_search_params(keywords, date_range, os.getenv('SERPAPI_API_KEY'))
         
         official_search = GoogleSearch(official_params)
         news_search = GoogleSearch(news_params)
@@ -191,13 +184,16 @@ def extract_text_from_url(url):
         return None
 
 async def extract_text_from_image(image_data):
-    """Extract text from image using OCR."""
+    """Extract text from image using EasyOCR."""
     try:
         # Convert image data to PIL Image
         image = Image.open(io.BytesIO(image_data))
         
-        # Extract text using Tesseract OCR
-        text = pytesseract.image_to_string(image, lang='aze+eng')
+        # Extract text using EasyOCR
+        results = reader.readtext(numpy.array(image))
+        
+        # Combine all detected text
+        text = ' '.join([result[1] for result in results])
         
         return text.strip()
     except Exception as e:

@@ -15,22 +15,12 @@ Bu Telegram botu, istifadəçilərin göndərdiyi xəbərlərin doğruluğunu an
 
 1. Python 3.7 və ya daha yüksək versiya tələb olunur
 
-2. Tesseract OCR quraşdırın:
-   - Windows: https://github.com/UB-Mannheim/tesseract/wiki
-   - Linux: `sudo apt-get install tesseract-ocr`
-   - macOS: `brew install tesseract`
-
-3. Tesseract dil paketlərini yükləyin:
-   - Windows: Tesseract quraşdırıcısından seçin
-   - Linux: `sudo apt-get install tesseract-ocr-aze tesseract-ocr-eng`
-   - macOS: `brew install tesseract-lang`
-
-4. Lazımi Python paketlərini yükləyin:
+2. Lazımi Python paketlərini yükləyin:
 ```bash
 pip install -r requirements.txt
 ```
 
-5. `.env` faylını yaradın və aşağıdakı məlumatları əlavə edin:
+3. `.env` faylını yaradın və aşağıdakı məlumatları əlavə edin:
 ```
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 GEMINI_API_KEY=your_gemini_api_key_here
