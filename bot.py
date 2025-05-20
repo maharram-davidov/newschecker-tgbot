@@ -138,28 +138,38 @@ def search_news_sources(news_content):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
     welcome_message = (
-        "Salam! Mən xəbər doğruluq analiz botuyam. 👋\n\n"
-        "Mənə bir xəbər linki və ya xəbər mətni göndərə bilərsiniz. "
-        "Mən də xəbərin doğruluğunu analiz edib sizə məlumat verəcəyəm.\n\n"
-        "İstifadə qaydası:\n"
-        "1. Bir xəbər linki göndərin\n"
-        "2. Və ya xəbər mətni birbaşa yazın\n"
-        "3. Mən sizə xəbərin doğruluğu haqqında ətraflı bir analiz təqdim edəcəyəm."
+        "👋 *Xoş gəlmisiniz!*\n\n"
+        "Mən xəbər doğruluq analiz botuyam. Mənə göndərdiyiniz xəbərlərin doğruluğunu yoxlayıb, "
+        "ətraflı analiz təqdim edə bilərəm.\n\n"
+        "📝 *İstifadə qaydası:*\n"
+        "1️⃣ Bir xəbər linki göndərin\n"
+        "2️⃣ Və ya xəbər mətni birbaşa yazın\n"
+        "3️⃣ Və ya xəbər şəkli göndərin\n\n"
+        "Mən sizə xəbərin doğruluğu haqqında ətraflı bir analiz təqdim edəcəyəm.\n\n"
+        "❓ Kömək üçün /help əmrindən istifadə edə bilərsiniz."
     )
-    await update.message.reply_text(welcome_message)
+    await update.message.reply_text(welcome_message, parse_mode='Markdown')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /help is issued."""
     help_text = (
-        "Bot İstifadə Təlimatı:\n\n"
-        "1. Bir xəbər linki göndərin və ya xəbər mətni yazın\n"
-        "2. Bot avtomatik olaraq xəbəri analiz edəcək\n"
-        "3. Sizə xəbərin doğruluğu haqqında ətraflı bir hesabat təqdim olunacaq\n\n"
-        "İstifadə nümunəsi:\n"
-        "- Bir xəbər linki yapışdırın\n"
-        "- Və ya 'Azərbaycanda yeni bir texnologiya şirkəti yaradıldı' kimi bir xəbər mətni yazın"
+        "🤖 *Bot İstifadə Təlimatı*\n\n"
+        "📌 *Əsas əmrlər:*\n"
+        "• /start - Botu başlatmaq\n"
+        "• /help - Bu kömək mesajını göstərmək\n\n"
+        "📌 *Xəbər analizi üçün:*\n"
+        "1. Bir xəbər linki göndərin\n"
+        "2. Və ya xəbər mətni birbaşa yazın\n"
+        "3. Və ya xəbər şəkli göndərin\n\n"
+        "📌 *Analiz nəticələri:*\n"
+        "• Xəbər Analizi\n"
+        "• Mənbə Analizi\n"
+        "• Bitərəflik Analizi\n"
+        "• Nəticə\n"
+        "• Qeydlər\n\n"
+        "❓ Suallarınız varsa, zəhmət olmasa məlumat verin."
     )
-    await update.message.reply_text(help_text)
+    await update.message.reply_text(help_text, parse_mode='Markdown')
 
 def extract_text_from_url(url):
     """Extract text content from a URL."""
@@ -209,15 +219,28 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Download the photo
         photo_data = await photo.download_as_bytearray()
         
+        # Send "analyzing" message
+        analyzing_message = await update.message.reply_text(
+            "🔄 Şəkil analiz olunur...\n"
+            "Zəhmət olmasa gözləyin..."
+        )
+        
         # Extract text from the photo
         extracted_text = await extract_text_from_image(photo_data)
         
         if not extracted_text:
-            await update.message.reply_text("Üzr istəyirəm, şəkildən mətn çıxara bilmədim. Zəhmət olmasa daha yaxşı keyfiyyətli şəkil göndərin.")
+            await analyzing_message.edit_text(
+                "❌ Üzr istəyirəm, şəkildən mətn çıxara bilmədim.\n"
+                "Zəhmət olmasa daha yaxşı keyfiyyətli şəkil göndərin."
+            )
             return
         
-        # Send "analyzing" message
-        analyzing_message = await update.message.reply_text("Şəkildən çıxarılan mətn analiz olunur... 🤔")
+        # Update analyzing message
+        await analyzing_message.edit_text(
+            "✅ Şəkildən mətn uğurla çıxarıldı!\n"
+            "🔄 Mətn analiz olunur...\n"
+            "Zəhmət olmasa gözləyin..."
+        )
         
         # Analyze the extracted text
         await analyze_news_content(update, context, extracted_text)
@@ -227,7 +250,10 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logger.error(f"Error in handle_photo: {e}")
-        await update.message.reply_text("Üzr istəyirəm, şəkil emal edilərkən xəta baş verdi. Zəhmət olmasa daha sonra yenidən cəhd edin.")
+        await update.message.reply_text(
+            "❌ Üzr istəyirəm, şəkil emal edilərkən xəta baş verdi.\n"
+            "Zəhmət olmasa daha sonra yenidən cəhd edin."
+        )
 
 async def analyze_news_content(update: Update, context: ContextTypes.DEFAULT_TYPE, news_content: str):
     """Analyze the news content."""
@@ -264,22 +290,22 @@ async def analyze_news_content(update: Update, context: ContextTypes.DEFAULT_TYP
         
         Zəhmət olmasa aşağıdakı formatda ətraflı bir analiz hazırla:
         
-        Xəbər Analizi:
+        📰 *Xəbər Analizi*
         
         [Burada xəbərin əsas məzmununu qısa şəkildə izah edin]
         
-        Mənbə Analizi:
+        🔍 *Mənbə Analizi*
         [Burada bütün mənbələri (xəbərdə istinad edilən, rəsmi və digər xəbər mənbələri) birlikdə analiz edin. 
         Hər bir mənbənin etibarlılığını, doğruluğunu və xəbərlə uyğunluğunu izah edin. 
         Mənbələr arasında uyğunluq və ya ziddiyyətləri qeyd edin]
         
-        Bitərəflik Analizi:
+        ⚖️ *Bitərəflik Analizi*
         [Xəbərin bitərəfliyini və mümkün tərəfli ifadələri izah edin]
         
-        Nəticə:
+        📊 *Nəticə*
         [Xəbərin ümumi qiymətləndirməsini və etibarlılıq səviyyəsini izah edin]
         
-        Qeydlər:
+        📝 *Qeydlər*
         [Əgər varsa, əlavə qeydlər və xəbərdarlıqlar]
         """
 
@@ -288,11 +314,14 @@ async def analyze_news_content(update: Update, context: ContextTypes.DEFAULT_TYP
         analysis = response.text
 
         # Send the analysis
-        await update.message.reply_text(analysis)
+        await update.message.reply_text(analysis, parse_mode='Markdown')
 
     except Exception as e:
         logger.error(f"Error in analyze_news_content: {e}")
-        await update.message.reply_text("Üzr istəyirəm, bir xəta baş verdi. Zəhmət olmasa daha sonra yenidən cəhd edin.")
+        await update.message.reply_text(
+            "❌ Üzr istəyirəm, bir xəta baş verdi.\n"
+            "Zəhmət olmasa daha sonra yenidən cəhd edin."
+        )
 
 async def analyze_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages and analyze news."""
@@ -302,15 +331,33 @@ async def analyze_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Check if it's a URL
         if message_text.startswith(('http://', 'https://')):
+            # Send "analyzing" message
+            analyzing_message = await update.message.reply_text(
+                "🔄 Link analiz olunur...\n"
+                "Zəhmət olmasa gözləyin..."
+            )
+            
             news_content = extract_text_from_url(message_text)
             if not news_content:
-                await update.message.reply_text("Üzr istəyirəm, bu linkdən məzmun çəkə bilmədim. Zəhmət olmasa başqa bir link sınayın.")
+                await analyzing_message.edit_text(
+                    "❌ Üzr istəyirəm, bu linkdən məzmun çəkə bilmədim.\n"
+                    "Zəhmət olmasa başqa bir link sınayın."
+                )
                 return
         else:
+            # Send "analyzing" message
+            analyzing_message = await update.message.reply_text(
+                "🔄 Mətn analiz olunur...\n"
+                "Zəhmət olmasa gözləyin..."
+            )
             news_content = message_text
 
-        # Send "analyzing" message
-        analyzing_message = await update.message.reply_text("Xəbər analiz olunur... 🤔")
+        # Update analyzing message
+        await analyzing_message.edit_text(
+            "✅ Məzmun uğurla əldə edildi!\n"
+            "🔄 Xəbər analiz olunur...\n"
+            "Zəhmət olmasa gözləyin..."
+        )
 
         # Analyze the news content
         await analyze_news_content(update, context, news_content)
@@ -320,7 +367,10 @@ async def analyze_news(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error in analyze_news: {e}")
-        await update.message.reply_text("Üzr istəyirəm, bir xəta baş verdi. Zəhmət olmasa daha sonra yenidən cəhd edin.")
+        await update.message.reply_text(
+            "❌ Üzr istəyirəm, bir xəta baş verdi.\n"
+            "Zəhmət olmasa daha sonra yenidən cəhd edin."
+        )
 
 def main():
     """Start the bot."""
