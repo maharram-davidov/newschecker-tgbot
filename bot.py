@@ -245,11 +245,7 @@ async def analyze_news_content(update: Update, context: ContextTypes.DEFAULT_TYP
         prompt = f"""
         Siz bir xəbər analiz mütəxəssisisiniz. Xəbərləri bitərəf və obyektiv şəkildə analiz edirsiniz.
         
-        Aşağıdakı xəbəri analiz et və bu meyarlara görə qiymətləndir:
-        1. Xəbərin doğruluğu
-        2. Etibarlı mənbələrdən sitat var mı?
-        3. Xəbərin bitərəfliyi
-        4. Mümkün yanlış məlumatlar və ya manipulyasiyalar
+        Aşağıdakı xəbəri analiz et və bu məlumatları istifadə edərək ətraflı bir analiz hazırla:
         
         Xəbər məzmunu:
         {news_content}
@@ -266,14 +262,25 @@ async def analyze_news_content(update: Update, context: ContextTypes.DEFAULT_TYP
         Digər xəbər mənbələrində tapılan məlumatlar:
         {json.dumps(search_results['news_sources'], indent=2, ensure_ascii=False) if search_results['news_sources'] else 'Digər xəbər mənbələrində bu xəbərlə əlaqəli məlumat tapılmadı.'}
         
-        Zəhmət olmasa analizinizi Azərbaycan dilində edin və bu formatda təqdim edin:
-        - Doğruluq Qiymətləndirməsi:
-        - Mənbə Etibarlılığı:
-        - Bitərəflik Analizi:
-        - Xəbərdə İstinad Edilən Mənbələrin Doğrulanması:
-        - Rəsmi Mənbələrdə Doğrulama:
-        - Digər Xəbər Mənbələrində Doğrulama:
-        - Xəbərdarlıqlar və Qeydlər:
+        Zəhmət olmasa aşağıdakı formatda ətraflı bir analiz hazırla:
+        
+        Xəbər Analizi:
+        
+        [Burada xəbərin əsas məzmununu qısa şəkildə izah edin]
+        
+        Mənbə Analizi:
+        [Burada bütün mənbələri (xəbərdə istinad edilən, rəsmi və digər xəbər mənbələri) birlikdə analiz edin. 
+        Hər bir mənbənin etibarlılığını, doğruluğunu və xəbərlə uyğunluğunu izah edin. 
+        Mənbələr arasında uyğunluq və ya ziddiyyətləri qeyd edin]
+        
+        Bitərəflik Analizi:
+        [Xəbərin bitərəfliyini və mümkün tərəfli ifadələri izah edin]
+        
+        Nəticə:
+        [Xəbərin ümumi qiymətləndirməsini və etibarlılıq səviyyəsini izah edin]
+        
+        Qeydlər:
+        [Əgər varsa, əlavə qeydlər və xəbərdarlıqlar]
         """
 
         # Get analysis from Gemini
