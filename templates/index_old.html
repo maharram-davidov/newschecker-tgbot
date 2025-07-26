@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xəbər Doğruluq Yoxlaması</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div x-data="newsAnalyzer()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-newspaper text-blue-600"></i>
+                Xəbər Doğruluq Yoxlaması
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                AI ilə xəbərlərin etibarlılığını yoxlayın və yanlış məlumatdan qorunun
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto">
+            <!-- Input Section -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-edit text-blue-600"></i>
+                    Xəbər Mətninizi Daxil Edin
+                </h2>
+                
+                <textarea 
+                    x-model="newsContent"
+                    placeholder="Analiz etmək istədiyiniz xəbər mətnini buraya yazın..."
+                    class="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    :disabled="analyzing"
+                ></textarea>
+                
+                <div class="flex justify-between items-center mt-4">
+                    <div class="text-sm text-gray-500">
+                        <span x-text="newsContent.length"></span> / 2000 simvol
+                    </div>
+                    
+                    <button 
+                        @click="analyzeNews()"
+                        :disabled="!newsContent.trim() || analyzing || newsContent.length > 2000"
+                        class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                    >
+                        <span x-show="!analyzing">
+                            <i class="fas fa-search mr-2"></i>Analiz Et
+                        </span>
+                        <span x-show="analyzing">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Analiz Olunur...
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div x-show="showResults" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">
+                    <i class="fas fa-chart-line text-green-600"></i>
+                    Analiz Nəticəsi
+                </h2>
+
+                <!-- Credibility Score -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-lg font-medium text-gray-700">Etibarlılıq Xalı</span>
+                        <span x-text="credibilityScore + '/10'" 
+                              class="text-2xl font-bold"
+                              :class="getScoreColor(credibilityScore)"></span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="h-3 rounded-full transition-all duration-500"
+                             :class="getScoreBarColor(credibilityScore)"
+                             :style="`width: ${(credibilityScore / 10) * 100}%`"></div>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <span class="text-sm font-medium px-3 py-1 rounded-full"
+                              :class="getLevelBadgeColor(credibilityLevel)"
+                              x-text="credibilityLevel"></span>
+                    </div>
+                </div>
+
+                <!-- Analysis Text -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Ətraflı Analiz</h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <pre x-text="analysisResult" class="whitespace-pre-wrap text-gray-700 font-sans"></pre>
+                    </div>
+                </div>
+
+                <!-- Warning Flags -->
+                <div x-show="warningFlags.length > 0" class="mb-6">
+                    <h3 class="text-lg font-semibold text-red-600 mb-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Xəbərdarlıqlar
+                    </h3>
+                    <ul class="space-y-2">
+                        <template x-for="flag in warningFlags">
+                            <li class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+                                <i class="fas fa-flag mr-2"></i>
+                                <span x-text="flag"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <!-- Recommendations -->
+                <div x-show="recommendations.length > 0">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-3">
+                        <i class="fas fa-lightbulb"></i>
+                        Tövsiyələr
+                    </h3>
+                    <ul class="space-y-2">
+                        <template x-for="recommendation in recommendations">
+                            <li class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                <span x-text="recommendation"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div x-show="error" class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+                <h3 class="text-lg font-semibold text-red-600 mb-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Xəta Baş Verdi
+                </h3>
+                <p x-text="error" class="text-red-700"></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-600">
+            <p>&copy; 2024 Xəbər Doğruluq Yoxlaması. AI ilə gücləndirilmiş analiz.</p>
+        </footer>
+    </div>
+
+    <script>
+        function newsAnalyzer() {
+            return {
+                newsContent: '',
+                analyzing: false,
+                showResults: false,
+                analysisResult: '',
+                credibilityScore: 0,
+                credibilityLevel: '',
+                warningFlags: [],
+                recommendations: [],
+                error: '',
+
+                async analyzeNews() {
+                    if (!this.newsContent.trim()) return;
+
+                    this.analyzing = true;
+                    this.error = '';
+                    this.showResults = false;
+
+                    try {
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                content: this.newsContent
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.analysisResult = data.analysis;
+                            this.credibilityScore = data.credibility_score || 0;
+                            this.credibilityLevel = data.credibility_level || '';
+                            this.warningFlags = data.warning_flags || [];
+                            this.recommendations = data.recommendations || [];
+                            this.showResults = true;
+                        } else {
+                            this.error = data.error || 'Bilinməyən xəta baş verdi';
+                        }
+                    } catch (err) {
+                        this.error = 'Serverə qoşulma xətası. Zəhmət olmasa yenidən cəhd edin.';
+                    } finally {
+                        this.analyzing = false;
+                    }
+                },
+
+                getScoreColor(score) {
+                    if (score >= 8) return 'text-green-600';
+                    if (score >= 6) return 'text-yellow-600';
+                    if (score >= 4) return 'text-orange-600';
+                    return 'text-red-600';
+                },
+
+                getScoreBarColor(score) {
+                    if (score >= 8) return 'bg-green-500';
+                    if (score >= 6) return 'bg-yellow-500';
+                    if (score >= 4) return 'bg-orange-500';
+                    return 'bg-red-500';
+                },
+
+                getLevelBadgeColor(level) {
+                    if (level.includes('Yüksək')) return 'bg-green-100 text-green-800';
+                    if (level.includes('Etibarlı')) return 'bg-blue-100 text-blue-800';
+                    if (level.includes('Orta')) return 'bg-yellow-100 text-yellow-800';
+                    if (level.includes('Şübhəli')) return 'bg-orange-100 text-orange-800';
+                    return 'bg-red-100 text-red-800';
+                }
+            }
+        }
+    </script>
+</body>
+</html> 

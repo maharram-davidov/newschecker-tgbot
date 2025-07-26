@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xəbər Doğruluq Yoxlaması - Genişlənmiş</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div x-data="newsAnalyzer()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-newspaper text-blue-600"></i>
+                Xəbər Doğruluq Yoxlaması
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                AI ilə mətn, link və şəkil formatında xəbərlərin etibarlılığını yoxlayın
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto">
+            <!-- Content Type Selection -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-list text-blue-600"></i>
+                    Analiz Növünü Seçin
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button @click="setContentType('text')" 
+                            :class="contentType === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+                            class="p-4 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-500 hover:text-white">
+                        <i class="fas fa-keyboard mr-2"></i>
+                        Mətn Analizi
+                    </button>
+                    
+                    <button @click="setContentType('url')" 
+                            :class="contentType === 'url' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+                            class="p-4 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-500 hover:text-white">
+                        <i class="fas fa-link mr-2"></i>
+                        Link Analizi
+                    </button>
+                    
+                    <button @click="setContentType('image')" 
+                            :class="contentType === 'image' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+                            class="p-4 rounded-lg font-medium transition-colors duration-200 hover:bg-blue-500 hover:text-white">
+                        <i class="fas fa-image mr-2"></i>
+                        Şəkil Analizi
+                    </button>
+                </div>
+
+                <!-- Text Input -->
+                <div x-show="contentType === 'text'" class="space-y-4">
+                    <textarea 
+                        x-model="textContent"
+                        placeholder="Analiz etmək istədiyiniz xəbər mətnini buraya yazın..."
+                        class="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        :disabled="analyzing"
+                    ></textarea>
+                    
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            <span x-text="textContent.length"></span> / 2000 simvol
+                        </div>
+                        
+                        <button 
+                            @click="analyzeContent()"
+                            :disabled="!textContent.trim() || analyzing || textContent.length > 2000"
+                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                        >
+                            <span x-show="!analyzing">
+                                <i class="fas fa-search mr-2"></i>Analiz Et
+                            </span>
+                            <span x-show="analyzing">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Analiz Olunur...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- URL Input -->
+                <div x-show="contentType === 'url'" class="space-y-4">
+                    <input 
+                        type="url"
+                        x-model="urlContent"
+                        placeholder="Xəbər linkini buraya yapışdırın (məs: https://example.com/news)"
+                        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        :disabled="analyzing"
+                    />
+                    
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Link daxil edin və məzmun avtomatik çıxarılacaq
+                        </div>
+                        
+                        <button 
+                            @click="analyzeContent()"
+                            :disabled="!urlContent.trim() || analyzing"
+                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                        >
+                            <span x-show="!analyzing">
+                                <i class="fas fa-search mr-2"></i>Link Analizi
+                            </span>
+                            <span x-show="analyzing">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Link İşlənir...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Image Input -->
+                <div x-show="contentType === 'image'" class="space-y-4">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                        <div x-show="!selectedImage">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-2">Xəbər şəklini seçin və ya sürükləyin</p>
+                            <p class="text-sm text-gray-500">PNG, JPG, JPEG, GIF və ya BMP (max 5MB)</p>
+                            <input 
+                                type="file" 
+                                id="imageInput"
+                                @change="handleImageSelect"
+                                accept="image/*"
+                                class="hidden"
+                                :disabled="analyzing"
+                            />
+                            <label for="imageInput" class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg cursor-pointer font-medium transition-colors duration-200">
+                                <i class="fas fa-folder-open mr-2"></i>Şəkil Seç
+                            </label>
+                        </div>
+                        
+                        <div x-show="selectedImage" class="space-y-4">
+                            <img x-show="imagePreview" :src="imagePreview" class="max-h-64 mx-auto rounded-lg shadow-md" />
+                            <p class="text-sm text-gray-600" x-text="selectedImage?.name"></p>
+                            <div class="flex justify-center space-x-4">
+                                <button 
+                                    @click="clearImage()"
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                                >
+                                    <i class="fas fa-times mr-2"></i>Ləğv Et
+                                </button>
+                                <button 
+                                    @click="analyzeContent()"
+                                    :disabled="!selectedImage || analyzing"
+                                    class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                                >
+                                    <span x-show="!analyzing">
+                                        <i class="fas fa-search mr-2"></i>Şəkil Analizi
+                                    </span>
+                                    <span x-show="analyzing">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>Şəkil İşlənir...
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extracted Content (for URL and Image) -->
+            <div x-show="showExtractedContent && extractedContent" class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
+                <h3 class="text-lg font-semibold text-yellow-800 mb-3">
+                    <i class="fas fa-extract mr-2"></i>
+                    Çıxarılan Məzmun
+                </h3>
+                <div class="bg-white rounded-lg p-4 max-h-32 overflow-y-auto">
+                    <p class="text-gray-700 text-sm" x-text="extractedContent"></p>
+                </div>
+                <p class="text-xs text-yellow-600 mt-2">Bu məzmun analiz üçün istifadə olunacaq</p>
+            </div>
+
+            <!-- Results Section -->
+            <div x-show="showResults" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">
+                    <i class="fas fa-chart-line text-green-600"></i>
+                    Analiz Nəticəsi
+                    <span x-show="fromCache" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full ml-2">
+                        <i class="fas fa-clock mr-1"></i>Keşdən
+                    </span>
+                    <span x-show="fromDatabase" class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">
+                        <i class="fas fa-database mr-1"></i>Əvvəlki Analiz
+                    </span>
+                </h2>
+
+                <!-- Content Type Badge -->
+                <div class="mb-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        <i :class="getContentTypeIcon()" class="mr-2"></i>
+                        <span x-text="getContentTypeLabel()"></span>
+                    </span>
+                </div>
+
+                <!-- Credibility Score -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-lg font-medium text-gray-700">Etibarlılıq Xalı</span>
+                        <span x-text="credibilityScore + '/10'" 
+                              class="text-2xl font-bold"
+                              :class="getScoreColor(credibilityScore)"></span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="h-3 rounded-full transition-all duration-500"
+                             :class="getScoreBarColor(credibilityScore)"
+                             :style="`width: ${(credibilityScore / 10) * 100}%`"></div>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <span class="text-sm font-medium px-3 py-1 rounded-full"
+                              :class="getLevelBadgeColor(credibilityLevel)"
+                              x-text="credibilityLevel"></span>
+                    </div>
+                </div>
+
+                <!-- Analysis Text -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Ətraflı Analiz</h3>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <pre x-text="analysisResult" class="whitespace-pre-wrap text-gray-700 font-sans"></pre>
+                    </div>
+                </div>
+
+                <!-- Warning Flags -->
+                <div x-show="warningFlags.length > 0" class="mb-6">
+                    <h3 class="text-lg font-semibold text-red-600 mb-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Xəbərdarlıqlar
+                    </h3>
+                    <ul class="space-y-2">
+                        <template x-for="flag in warningFlags">
+                            <li class="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+                                <i class="fas fa-flag mr-2"></i>
+                                <span x-text="flag"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <!-- Recommendations -->
+                <div x-show="recommendations.length > 0">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-3">
+                        <i class="fas fa-lightbulb"></i>
+                        Tövsiyələr
+                    </h3>
+                    <ul class="space-y-2">
+                        <template x-for="recommendation in recommendations">
+                            <li class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700">
+                                <i class="fas fa-arrow-right mr-2"></i>
+                                <span x-text="recommendation"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div x-show="error" class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+                <h3 class="text-lg font-semibold text-red-600 mb-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Xəta Baş Verdi
+                </h3>
+                <p x-text="error" class="text-red-700"></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-600">
+            <p>&copy; 2024 Xəbər Doğruluq Yoxlaması. AI ilə gücləndirilmiş təkmil analiz.</p>
+        </footer>
+    </div>
+
+    <script>
+        function newsAnalyzer() {
+            return {
+                contentType: 'text',
+                textContent: '',
+                urlContent: '',
+                selectedImage: null,
+                imagePreview: null,
+                analyzing: false,
+                showResults: false,
+                showExtractedContent: false,
+                extractedContent: '',
+                analysisResult: '',
+                credibilityScore: 0,
+                credibilityLevel: '',
+                warningFlags: [],
+                recommendations: [],
+                error: '',
+                fromCache: false,
+                fromDatabase: false,
+
+                setContentType(type) {
+                    this.contentType = type;
+                    this.clearResults();
+                },
+
+                clearResults() {
+                    this.showResults = false;
+                    this.showExtractedContent = false;
+                    this.error = '';
+                    this.analysisResult = '';
+                    this.extractedContent = '';
+                    this.fromCache = false;
+                    this.fromDatabase = false;
+                },
+
+                handleImageSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.selectedImage = file;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.imagePreview = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+
+                clearImage() {
+                    this.selectedImage = null;
+                    this.imagePreview = null;
+                    document.getElementById('imageInput').value = '';
+                },
+
+                async analyzeContent() {
+                    this.analyzing = true;
+                    this.error = '';
+                    this.showResults = false;
+                    this.showExtractedContent = false;
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('content_type', this.contentType);
+
+                        if (this.contentType === 'text') {
+                            formData.append('content', this.textContent);
+                        } else if (this.contentType === 'url') {
+                            formData.append('url', this.urlContent);
+                        } else if (this.contentType === 'image') {
+                            formData.append('image', this.selectedImage);
+                        }
+
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.analysisResult = data.analysis;
+                            this.credibilityScore = data.credibility_score || 0;
+                            this.credibilityLevel = data.credibility_level || '';
+                            this.warningFlags = data.warning_flags || [];
+                            this.recommendations = data.recommendations || [];
+                            this.fromCache = data.from_cache || false;
+                            this.fromDatabase = data.from_database || false;
+                            this.showResults = true;
+
+                            if (data.extracted_content && this.contentType !== 'text') {
+                                this.extractedContent = data.extracted_content;
+                                this.showExtractedContent = true;
+                            }
+                        } else {
+                            this.error = data.error || 'Bilinməyən xəta baş verdi';
+                        }
+                    } catch (err) {
+                        this.error = 'Serverə qoşulma xətası. Zəhmət olmasa yenidən cəhd edin.';
+                    } finally {
+                        this.analyzing = false;
+                    }
+                },
+
+                getContentTypeIcon() {
+                    switch(this.contentType) {
+                        case 'text': return 'fas fa-keyboard';
+                        case 'url': return 'fas fa-link';
+                        case 'image': return 'fas fa-image';
+                        default: return 'fas fa-question';
+                    }
+                },
+
+                getContentTypeLabel() {
+                    switch(this.contentType) {
+                        case 'text': return 'Mətn Analizi';
+                        case 'url': return 'Link Analizi';
+                        case 'image': return 'Şəkil Analizi';
+                        default: return 'Bilinməyən';
+                    }
+                },
+
+                getScoreColor(score) {
+                    if (score >= 8) return 'text-green-600';
+                    if (score >= 6) return 'text-yellow-600';
+                    if (score >= 4) return 'text-orange-600';
+                    return 'text-red-600';
+                },
+
+                getScoreBarColor(score) {
+                    if (score >= 8) return 'bg-green-500';
+                    if (score >= 6) return 'bg-yellow-500';
+                    if (score >= 4) return 'bg-orange-500';
+                    return 'bg-red-500';
+                },
+
+                getLevelBadgeColor(level) {
+                    if (level.includes('Yüksək')) return 'bg-green-100 text-green-800';
+                    if (level.includes('Etibarlı')) return 'bg-blue-100 text-blue-800';
+                    if (level.includes('Orta')) return 'bg-yellow-100 text-yellow-800';
+                    if (level.includes('Şübhəli')) return 'bg-orange-100 text-orange-800';
+                    return 'bg-red-100 text-red-800';
+                }
+            }
+        }
+    </script>
+</body>
+</html> 
